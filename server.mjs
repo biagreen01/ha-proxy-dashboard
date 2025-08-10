@@ -77,5 +77,36 @@ app.get("/api/rooms", async (_req, res) => {
 app.get(/^(?!\/api).*/, (_req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
+// ── SmartThings snapshot: /api/st/snapshot ─────────────────
+import dotenv from 'dotenv';
+dotenv.config();
 
+const ST_TOKEN = process.env.SMARTTHINGS_TOKEN;
+
+app.get('/api/st/snapshot', async (req, res) => {
+  try {
+    if (!ST_TOKEN) {
+      return res.status(500).json({ error: 'SMARTTHINGS_TOKEN missing in .env' });
+    }
+    const r = await fetch('https://api.smartthings.com/v1/devices', {
+      headers: { Authorization: Bearer ${ST_TOKEN} }
+    });
+    if (!r.ok) {
+      const text = await r.text();
+      return res.status(r.status).json({ error: 'SmartThings devices fetch failed', detail: text });
+    }
+    const data = await r.json();
+    const devices = (data.items || []).map(d => ({
+      id: d.deviceId,
+      name: d.label || d.name,
+      room: (d.room && d.room.name) || '',
+      type: (d.ocf && d.ocf.deviceType) || d.profile?.name || 'device',
+    }));
+    res.json({ ok: true, devices, fetchedAt: new Date().toISOString() });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: String(e) });
+  }
+});
 app.listen(PORT, () => console.log(`✅ listening http://localhost:${PORT}`));
+
