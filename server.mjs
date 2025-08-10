@@ -55,18 +55,62 @@ app.get("/api/raw", async (_req, res) => {
 
 app.get("/api/rooms", async (_req, res) => {
   try {
-    const j = await haFetch(`/api/states/${ENTITY_ID}`);
-    const out = [{
-      id: ENTITY_ID,
-      type: "ac",
-      name: NAME,
-      room: ROOM,
-      power: j.state !== "off",
-      mode: j.state,
-      tempSet: j.attributes.temperature ?? null,
-      tempCur: j.attributes.current_temperature ?? null,
+    // 1) HA가 사용 가능하면 시도
+    if (HA_BASE && HA_TOKEN && ENTITY_ID) {
+      try {
+        const r = await fetch(`${HA_BASE}/api/states/${ENTITY_ID}`, {
+          headers: { Authorization: `Bearer ${HA_TOKEN}` }
+        });
+        if (r.ok) {
+          const j = await r.json();
+          const out = [{
+            id: ENTITY_ID,
+            type: "ac",
+            name: NAME,
+            room: ROOM,
+            power: j.state !== "off",
+            mode: j.state,
+            tempSet: j.attributes.temperature ?? null,
+            tempCur: j.attributes.current_temperature ?? null,
+            updatedAt: new Date().toISOString(),
+          }];
+          return res.json(out);
+        }
+        // HA가 401/500이면 ST로 폴백
+      } catch (_) {
+        // HA 호출 에러 → ST로 폴백
+      }
+    }
+
+    // 2) ST 사용 (HA 없거나 실패하면 여기로)
+    if (!ST_TOKEN) {
+      return res.status(500).json({ error: "SMARTTHINGS_TOKEN missing in .env" });
+    }
+    const r2 = await fetch("https://api.smartthings.com/v1/devices", {
+      headers: { Authorization: `Bearer ${ST_TOKEN}` }
+    });
+    if (!r2.ok) {
+      const txt = await r2.text();
+      return res.status(r2.status).json({ error: "SmartThings devices fetch failed", detail: txt });
+    }
+    const data = await r2.json();
+    const devices = (data.items || []).map(d => ({
+      id: d.deviceId,
+      type: "ac", // 필요시 d.profile?.name 등에 맞춰 매핑
+      name: d.label || d.name,
+      room: d.room?.name || "",
+      power: undefined,
+      mode: undefined,
+      tempSet: undefined,
+      tempCur: undefined,
       updatedAt: new Date().toISOString(),
-    }];
+    }));
+    return res.json(devices);
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ error: String(e) });
+  }
+});
     res.json(out);
   } catch (e) {
     res.status(500).json({ error: String(e) });
@@ -89,7 +133,7 @@ app.get('/api/st/snapshot', async (req, res) => {
       return res.status(500).json({ error: 'SMARTTHINGS_TOKEN missing in .env' });
     }
     const r = await fetch('https://api.smartthings.com/v1/devices', {
-      headers: { Authorization: Bearer ${ST_TOKEN} }
+      headers: { Authorization: 'Bearer ${ST_TOKEN}' }
     });
     if (!r.ok) {
       const text = await r.text();
@@ -109,4 +153,5 @@ app.get('/api/st/snapshot', async (req, res) => {
   }
 });
 app.listen(PORT, () => console.log(`✅ listening http://localhost:${PORT}`));
+
 
