@@ -246,7 +246,7 @@ window.syncFromST = syncFromST;
           <main className="max-w-6xl mx-auto px-4 py-4">
             {filtered.length === 0 ? (
               <div className="text-center text-gray-500 py-20">
-                아직 등록된 기기가 없어요. <button className="underline" onClick={() => { setEditTarget(null); setShowForm(true); }}>기기 추가</button> 또는 <button className="underline" onClick={seedSamples}>샘플 넣기</button>
+                '새로 고침' 버튼을 눌러 기기 현황을 확인해 보세요. 혹은 <button className="underline" onClick={() => { setEditTarget(null); setShowForm(true); }}>기기 추가</button> 또는 <button className="underline" onClick={seedSamples}>샘플 넣기</button>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -687,3 +687,4 @@ window.syncFromST = syncFromST;
 </script>
 
 </html>
+
