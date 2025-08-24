@@ -1,5 +1,5 @@
 // server.mjs — SmartThings만 사용 (LG ThinQ는 ST에 연결 서비스로 연동)
-
+console.log(">>> 지금 실행되는 파일 경로:", import.meta.url); 
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
@@ -142,3 +142,4 @@ app.get(/^(?!\/api).*/, (_req, res) => {
 });
 
 app.listen(PORT, () => console.log(`✅ listening http://localhost:${PORT}`));
+
